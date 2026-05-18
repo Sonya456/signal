@@ -1,7 +1,170 @@
-<h2>Register</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Register</button>
-</form>
-``
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Register</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #1e1e2f, #2c2c3a);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .card {
+            background: #2f2f44;
+            padding: 40px;
+            border-radius: 12px;
+            width: 340px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.4);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 6px;
+            background: #4CAF50;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .error {
+            color: #ff4d4d;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: #4CAF50;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+
+    <h2>Create Account</h2>
+
+    <input id="username" placeholder="Username">
+
+    <input id="email" type="email" placeholder="Email">
+
+    <input id="password" type="password" placeholder="Password">
+
+    <input id="password2" type="password" placeholder="Confirm Password">
+
+    <button onclick="register()">Register</button>
+
+    <div id="message"></div>
+
+    <div class="link">
+        <a href="/login/">Already have an account?</a>
+    </div>
+
+</div>
+
+<script>
+async function register() {
+
+    const username = document.getElementById('username').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const password2 = document.getElementById('password2').value;
+
+    const message = document.getElementById('message');
+
+    message.innerHTML = "";
+    message.className = "";
+
+    if (password !== password2) {
+
+        message.className = "error";
+        message.innerHTML = "Passwords do not match";
+
+        return;
+    }
+
+    const response = await fetch('/api/register/', {
+
+        method: 'POST',
+
+        headers: {
+            'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({
+            username,
+            email,
+            password
+        })
+    });
+
+    const data = await response.json();
+
+    if (data.access) {
+
+        localStorage.setItem('access', data.access);
+        localStorage.setItem('refresh', data.refresh);
+
+        message.className = "success";
+        message.innerHTML = "Account created ✅";
+
+        setTimeout(() => {
+            window.location.href = '/profile/';
+        }, 1000);
+
+    } else {
+
+        message.className = "error";
+
+        if (data.error) {
+            message.innerHTML = data.error;
+        } else {
+            message.innerHTML = "Registration failed";
+        }
+    }
+}
+</script>
+
+</body>
+</html>
+</html>

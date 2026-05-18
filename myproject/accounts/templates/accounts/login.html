@@ -1,8 +1,118 @@
-<h2>Login</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Log in</button>
-</form>
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
 
-<a href="{% url 'register' %}">Register</a>
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #1e1e2f, #2c2c3a);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .card {
+            background: #2f2f44;
+            padding: 40px;
+            border-radius: 12px;
+            width: 320px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input,
+        button {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #4CAF50;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .error {
+            color: #ff4d4d;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .link {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Login</h2>
+
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="login()">Log in</button>
+
+    <div class="error" id="error"></div>
+
+    <div class="link">
+        <a href="/register/">Register</a>
+    </div>
+</div>
+
+<script>
+async function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    const res = await fetch('/api/login/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+
+    if (data.access) {
+        // zapis tokenów
+        localStorage.setItem('access', data.access);
+        localStorage.setItem('refresh', data.refresh);
+
+        // redirect
+        window.location.href = '/profile/';
+    } else {
+        document.getElementById('error').innerText = "Wrong login or password";
+    }
+}
+</script>
+
+</body>
+</html>
