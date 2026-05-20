@@ -19,6 +19,10 @@ urlpatterns = [
     path('login/', views.frontend_login, name='login'),
     path('register/', views.frontend_register, name='register'),
     path('profile/', views.profile_page, name='profile'),
+    path('', views.home, name='home'),
+
+    
+    path('api/trend/', views.trend_filter),
 
     # JWT API
     path('api/register/', views.register_api, name='api_register'),

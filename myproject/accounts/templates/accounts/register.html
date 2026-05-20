@@ -80,6 +80,14 @@
 </head>
 <body>
 
+
+{% extends "accounts/base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+
+
 <div class="card">
 
     <h2>Create Account</h2>
@@ -164,6 +172,8 @@ async function register() {
     }
 }
 </script>
+
+{% endblock %}
 
 </body>
 </html>

@@ -6,6 +6,69 @@ from rest_framework import status
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
+
+
+import requests
+import pandas as pd
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+
+@api_view(['GET'])
+def trend_filter(request):
+
+    symbol = request.GET.get('symbol', 'BTCUSDT')
+
+    url = "https://api.binance.com/api/v3/klines"
+
+    params = {
+        "symbol": symbol,
+        "interval": "1h",
+        "limit": 200
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    # zamiana na dataframe
+    df = pd.DataFrame(data, columns=[
+        "open_time", "open", "high", "low", "close",
+        "volume", "close_time", "quote_asset_volume",
+        "number_of_trades", "taker_buy_base",
+        "taker_buy_quote", "ignore"
+    ])
+
+    df["close"] = df["close"].astype(float)
+
+    # EMA 200
+    df["ema200"] = df["close"].ewm(span=200).mean()
+
+    latest_price = df["close"].iloc[-1]
+    ema = df["ema200"].iloc[-1]
+
+    trend = "bullish" if latest_price > ema else "bearish"
+
+    return Response({
+        "symbol": symbol,
+        "price": latest_price,
+        "ema200": ema,
+        "trend": trend
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def protected_api(request):
+    return Response({
+        'message': f'Hello {request.user.username}'
+    })
+
+def home(request):
+    return render(request, 'accounts/home.html')
+
+
 
 @api_view(['POST'])
 def register_api(request):
@@ -71,7 +134,7 @@ def login_api(request):
     })
 
 
-# ✅ LOGOUT (blacklist)
+#  LOGOUT (blacklist)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_api(request):

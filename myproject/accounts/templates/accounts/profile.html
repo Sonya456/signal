@@ -1,27 +1,76 @@
-<h2>Profile</h2>
-<p id="data"></p>
+{% extends "accounts/base.html" %}
 
-<button onclick="logout()">Logout</button>
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Market Signals</h2>
+
+    <p id="btcTrend">Loading BTC...</p>
+    <p id="ethTrend">Loading ETH...</p>
+
+</div>
+
 
 <script>
-async function loadProfile() {
-    const token = localStorage.getItem('access');
 
-    const res = await fetch('/api/protected/', {
-        headers: {
-            'Authorization': 'Bearer ' + token
+// ✅ INIT
+function getToken() {
+    return localStorage.getItem('access');
+}
+
+
+
+// ✅ TREND FETCH
+async function getTrend(symbol, elementId) {
+
+    const token = getToken();
+
+    // ❌ brak tokena → redirect
+    if (!token) {
+        window.location.href = '/login/';
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/trend/?symbol=${symbol}`);
+
+        // ❌ token expired / auth error
+        if (res.status === 401) {
+            logout();
+            return;
         }
-    });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    document.getElementById('data').innerText = data.message;
+        const el = document.getElementById(elementId);
+
+        if (data.trend === "bullish") {
+            el.className = "trend-bull";
+            el.innerText = `🚀 ${symbol} Bullish (${Math.round(data.price)})`;
+        } else {
+            el.className = "trend-bear";
+            el.innerText = `🔻 ${symbol} Bearish (${Math.round(data.price)})`;
+        }
+
+    } catch (err) {
+        console.error("Trend error:", err);
+    }
 }
 
-function logout() {
-    localStorage.clear();
-    window.location.href = '/login/';
+// ✅ LOAD ALL SIGNALS
+function loadSignals() {
+    getTrend("BTCUSDT", "btcTrend");
+    getTrend("ETHUSDT", "ethTrend");
 }
 
-loadProfile();
+// ✅ AUTO REFRESH co 5s
+setInterval(loadSignals, 5000);
+
+// ✅ FIRST LOAD
+loadSignals();
+
 </script>
+
+{% endblock %}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}App{% endblock %}</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #1e1e2f, #2c2c3a);
+            font-family: Arial;
+            color: white;
+            padding-top: 70px;
+        }
+
+        /* ✅ NAVBAR */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #1e1e2f;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            border-bottom: 1px solid #444;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .navbar a:hover {
+            color: #4CAF50;
+        }
+
+        /* ✅ CENTER CONTENT */
+        .container {
+            display: flex;
+            justify-content: center;
+            margin-top: 40px;
+        }
+
+        /* ✅ CARD */
+        .card {
+            background: #2f2f44;
+            padding: 40px;
+            border-radius: 12px;
+            width: 320px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: none;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .trend-bull {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+.trend-bear {
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+
+    </style>
+</head>
+<body>
+
+<!-- ✅ NAVBAR -->
+<div class="navbar" id="nav"></div>
+
+<!-- ✅ CONTENT -->
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+<script>
+const nav = document.getElementById('nav');
+const token = localStorage.getItem('access');
+
+if (token) {
+    nav.innerHTML = `
+        <a href="/">Home</a>
+        <a href="/profile/">Profile</a>
+        <a href="#" onclick="logout()">Logout</a>
+    `;
+} else {
+    nav.innerHTML = `
+        <a href="/">Home</a>
+        <a href="/login/">Login</a>
+        <a href="/register/">Register</a>
+    `;
+}
+function logout() {
+    localStorage.clear();
+    window.location.href = '/login/';
+}
+</script>
+
+</body>
+</html>

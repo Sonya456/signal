@@ -1,0 +1,10 @@
+
+<script>
+const token = localStorage.getItem('access');
+
+if (token) {
+    window.location.href = '/profile/';
+} else {
+    window.location.href = '/login/';
+}
+</script>
