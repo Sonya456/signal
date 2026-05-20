@@ -4,16 +4,53 @@
 
 {% block content %}
 
+
 <div class="card">
     <h2>Market Signals</h2>
 
-    <p id="btcTrend">Loading BTC...</p>
-    <p id="ethTrend">Loading ETH...</p>
+    <h3>BTC</h3>
+
+    <p id="btcPrice"></p>
+
+    <p id="btcTrend">Loading...</p>
+    <p id="btcRSI"></p>
+    <p id="btcDistance"></p>
+    <p id="btcStructure"></p>
+    <p id="btcVolume"></p>
+    <p id="btcBreakout"></p>
+    <p id="btcSupport"></p>
+    <p id="btcScore"></p>
+
+
+
+
+
+
+
+
+    <hr>
+
+    <h3>ETH</h3>
+
+    <p id="ethPrice"></p>
+
+    <p id="ethTrend"></p>
+    <p id="ethRSI"></p>
+    <p id="ethDistance"></p>
+    <p id="ethStructure"></p>
+    <p id="ethVolume"></p>
+    <p id="ethBreakout"></p>
+    <p id="ethSupport"></p>
+    <p id="ethScore"></p>
+
 
 </div>
 
 
 <script>
+
+
+
 
 // ✅ INIT
 function getToken() {
@@ -21,48 +58,324 @@ function getToken() {
 }
 
 
+let lastPrice = {};
 
-// ✅ TREND FETCH
-async function getTrend(symbol, elementId) {
-
-    const token = getToken();
-
-    // ❌ brak tokena → redirect
-    if (!token) {
-        window.location.href = '/login/';
-        return;
-    }
+async function getPrice(symbol, elementId) {
 
     try {
-        const res = await fetch(`/api/trend/?symbol=${symbol}`);
-
-        // ❌ token expired / auth error
-        if (res.status === 401) {
-            logout();
-            return;
-        }
-
+        const res = await fetch(`/api/price/?symbol=${symbol}`);
         const data = await res.json();
 
         const el = document.getElementById(elementId);
 
+        let color = "";
+
+        if (lastPrice[symbol]) {
+            if (data.price > lastPrice[symbol]) {
+                color = "lime";
+            } else if (data.price < lastPrice[symbol]) {
+                color = "red";
+            }
+        }
+
+        lastPrice[symbol] = data.price;
+
+        el.innerHTML = `
+            <strong>${symbol}</strong><br>
+            <span style="font-size:22px; color:${color}">
+                💰 $${data.price.toLocaleString()}
+            </span>
+        `;
+
+    } catch (err) {
+        console.error("Price error:", err);
+    }
+}
+
+async function getDistance(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/distance/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let icon = "⏳";
+
+        if (data.status === "too_close") {
+            el.className = "trend-bear";
+            icon = "⚠️";
+        }
+        else if (data.status === "far") {
+            el.className = "trend-bull";
+            icon = "🚀";
+        }
+
+        el.innerHTML = `
+            Distance: ${data.distance.toFixed(2)}%<br>
+            ${icon} ${data.logic}
+        `;
+
+    } catch (err) {
+        console.error("Distance error:", err);
+    }
+}
+
+async function getScore(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/score/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let color = "";
+
+        if (data.score >= 7) color = "trend-bull";
+        else if (data.score >= 4) color = "";
+        else color = "trend-bear";
+
+        el.className = color;
+
+        el.innerHTML = `
+            LONG Score: ${data.score}/10<br>
+            Probability: ${data.probability}<br>
+            <small>${data.reasons.join(", ")}</small>
+        `;
+
+    } catch (err) {
+        console.error("Score error:", err);
+    }
+}
+
+
+
+async function getSupport(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/support/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let icon = "⏳";
+
+        if (data.status === "strong") {
+            el.className = "trend-bull";
+            icon = "🚀";
+        }
+        else if (data.status === "weak") {
+            el.className = "trend-bear";
+            icon = "⚠️";
+        }
+
+        el.innerHTML = `
+            Support Reaction: ${data.status.toUpperCase()}<br>
+            ${icon} ${data.logic}
+        `;
+
+    } catch (err) {
+        console.error("Support error:", err);
+    }
+}
+
+async function getStructure(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/structure/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let icon = "⏳";
+
+        if (data.structure === "strong_bull") {
+            el.className = "trend-bull";
+            icon = "🚀";
+        }
+        else if (data.structure === "weak") {
+            el.className = "trend-bear";
+            icon = "🔻";
+        }
+
+        el.innerHTML = `
+            Market Structure: ${data.structure.replace("_", " ").toUpperCase()}<br>
+            ${icon} ${data.logic}
+        `;
+
+    } catch (err) {
+        console.error("Structure error:", err);
+    }
+}
+
+
+async function getRSI(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/rsi/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let icon = "⏳";
+
+        if (data.status === "oversold") {
+            el.className = "trend-bull";
+            icon = "🚀";
+        }
+        else if (data.status === "overbought") {
+            el.className = "trend-bear";
+            icon = "🔻";
+        }
+
+        el.innerHTML = `
+            RSI: ${data.rsi.toFixed(1)}<br>
+            ${icon} ${data.status.toUpperCase()}<br>
+            <small>${data.logic}</small>
+        `;
+
+    } catch (err) {
+        console.error("RSI error:", err);
+    }
+}
+
+async function getBreakout(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/breakout/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let icon = "⏳";
+
+        if (data.status === "confirmed") {
+            el.className = "trend-bull";
+            icon = "🚀";
+        } else {
+            el.className = "";
+            icon = "❌";
+        }
+
+        el.innerHTML = `
+            Breakout Status: ${data.status.replace("_", " ").toUpperCase()}<br>
+            ${icon} ${data.logic}
+        `;
+
+    } catch (err) {
+        console.error("Breakout error:", err);
+    }
+}
+
+async function getVolume(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/volume/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let icon = "⏳";
+
+        if (data.status === "spike") {
+            el.className = "trend-bull";
+            icon = "🔥";
+        }
+        else if (data.status === "increasing") {
+            icon = "📈";
+        }
+        else if (data.status === "low") {
+            el.className = "trend-bear";
+            icon = "⚠️";
+        }
+
+        el.innerHTML = `
+            Volume Ratio: ${data.ratio.toFixed(2)}x<br>
+            ${icon} ${data.logic}
+        `;
+
+    } catch (err) {
+        console.error("Volume error:", err);
+    }
+}
+
+
+async function getTrend(symbol, elementId) {
+
+    try {
+        const res = await fetch(`/api/trend/?symbol=${symbol}`);
+        const data = await res.json();
+
+        const el = document.getElementById(elementId);
+
+        let icon = "⏳";
+
         if (data.trend === "bullish") {
             el.className = "trend-bull";
-            el.innerText = `🚀 ${symbol} Bullish (${Math.round(data.price)})`;
-        } else {
-            el.className = "trend-bear";
-            el.innerText = `🔻 ${symbol} Bearish (${Math.round(data.price)})`;
+            icon = "🚀";
         }
+        else if (data.trend === "bearish") {
+            el.className = "trend-bear";
+            icon = "🔻";
+        }
+
+        el.innerHTML = `
+            <strong>${symbol}</strong><br>
+            Price: ${Math.round(data.price)}<br>
+            ${icon} ${data.trend.toUpperCase()}<br>
+            <small>${data.logic}</small>
+        `;
 
     } catch (err) {
         console.error("Trend error:", err);
     }
 }
+``
 
 // ✅ LOAD ALL SIGNALS
 function loadSignals() {
     getTrend("BTCUSDT", "btcTrend");
     getTrend("ETHUSDT", "ethTrend");
+
+
+    // RSI
+    getRSI("BTCUSDT", "btcRSI");
+    getRSI("ETHUSDT", "ethRSI")
+
+
+    getDistance("BTCUSDT", "btcDistance");
+    getDistance("ETHUSDT", "ethDistance");
+
+
+
+    // ✅ volume
+    getVolume("BTCUSDT", "btcVolume");
+    getVolume("ETHUSDT", "ethVolume");
+
+
+    // BREAKOUT
+    getBreakout("BTCUSDT", "btcBreakout");
+    getBreakout("ETHUSDT", "ethBreakout");
+
+
+    getStructure("BTCUSDT", "btcStructure");
+    getStructure("ETHUSDT", "ethStructure");
+
+
+    getSupport("BTCUSDT", "btcSupport");
+    getSupport("ETHUSDT", "ethSupport");
+
+
+
+    getScore("BTCUSDT", "btcScore");
+    getScore("ETHUSDT", "ethScore");
+
+
+    // ✅ LIVE PRICE
+    getPrice("BTCUSDT", "btcPrice");
+    getPrice("ETHUSDT", "ethPrice");
+
+
 }
 
 // ✅ AUTO REFRESH co 5s
