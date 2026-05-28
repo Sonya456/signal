@@ -1,7 +1,40 @@
 import requests
 import pandas as pd
+from django.core.cache import cache
 
 BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines"
+
+
+
+def fetch_klines_df(symbol, interval="1h", limit=200):
+    cache_key = f"klines_{symbol}_{interval}_{limit}"
+
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    res = requests.get(
+        "https://api.binance.com/api/v3/klines",
+        params={"symbol": symbol, "interval": interval, "limit": limit},
+        timeout=10
+    )
+
+    data = res.json()
+
+    df = pd.DataFrame(data, columns=[
+        "open_time", "open", "high", "low", "close",
+        "volume", "close_time", "qav", "trades",
+        "tb_base", "tb_quote", "ignore"
+    ])
+
+    df["close"] = df["close"].astype(float)
+    df["volume"] = df["volume"].astype(float)
+
+    # ✅ CACHE 30 sekund
+    cache.set(cache_key, df, timeout=30)
+
+    return df
+
 
 def fetch_klines_df(symbol: str, interval: str = "1h", limit: int = 60) -> pd.DataFrame:
     data = requests.get(
@@ -10,7 +43,7 @@ def fetch_klines_df(symbol: str, interval: str = "1h", limit: int = 60) -> pd.Da
         timeout=10,
     ).json()
 
-    # Binance w przypadku błędu zwraca dict z 'code'/'msg'
+
     if isinstance(data, dict) and "code" in data:
         raise RuntimeError(f"Binance error: {data.get('msg')}")
 
@@ -31,12 +64,19 @@ def fetch_klines_df(symbol: str, interval: str = "1h", limit: int = 60) -> pd.Da
 
 
 def fetch_price(symbol):
-    res = requests.get(
-        "https://api.binance.com/api/v3/ticker/price",
-        params={"symbol": symbol},
-        timeout=10
-    )
+    try:
+        res = requests.get(
+            "https://api.binance.com/api/v3/ticker/price",
+            params={"symbol": symbol},
+            timeout=10
+        )
 
-    data = res.json()
+        data = res.json()
 
-    return float(data["price"])
+        if "price" not in data:
+            raise ValueError("Invalid Binance response")
+
+        return float(data["price"])
+
+    except Exception as e:
+        raise RuntimeError(f"Price fetch error: {str(e)}")

@@ -28,6 +28,14 @@ SECRET_KEY = 'django-insecure-!x%d&eyb2-99c(rjem75^67_0-x95!wbz1dfmwt1lv4=z$)odt
 DEBUG = True
 
 
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
+
+
 #
 # ALLOWED_HOSTS = []
 

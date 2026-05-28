@@ -1,13 +1,12 @@
 
-## Crypto Signal API (Django)
+## Market Data Processing API
 
-Lightweight backend app for real-time crypto analysis and trading signals.
 
-## 🔹 What it does
-- analyzes Binance market data
-- calculates indicators (EMA, RSI, Volume)
-- detects trend, breakout, support/resistance
-- generates **LONG score (0–10)** with probability
+
+Backend system for real-time cryptocurrency data processing, signal generation, and trading analysis.
+
+Production-ready backend service with caching, modular architecture, and external API integration.
+
 
 ## 🔹 Main endpoint
 
@@ -23,18 +22,21 @@ Example:
 }
 ```
 
-### 🔹 Tech stack
+### 🔹 Tech Stack
 
-Django + DRF
-Pandas / NumPy
-Binance API
-JWT auth
-Docker
+- Django + DRF  
+- Pandas / NumPy  
+- Binance API  
+- JWT Authentication  
+- Docker
+
 
 ### 🔹 Run (Docker)
 
+```bash
 docker compose build
 docker compose up
+```
 
 ### App:
 
