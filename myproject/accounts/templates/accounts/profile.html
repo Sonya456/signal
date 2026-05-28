@@ -371,14 +371,13 @@ function loadSignals() {
     getScore("ETHUSDT", "ethScore");
 
 
-    // ✅ LIVE PRICE
     getPrice("BTCUSDT", "btcPrice");
     getPrice("ETHUSDT", "ethPrice");
 
 
 }
 
-// ✅ AUTO REFRESH co 5s
+
 setInterval(loadSignals, 5000);
 
 // ✅ FIRST LOAD
