@@ -17,32 +17,22 @@ def compute_distance(df):
 
 
 
-
-
-
-
 def compute_support(df):
     support = df["low"].rolling(20).min().iloc[-2]
+    price = df["close"].iloc[-1]
 
-    last_low = df["low"].iloc[-1]
-    last_open = df["open"].iloc[-1]
-    last_close = df["close"].iloc[-1]
+    distance = (price - support) / price * 100
 
-    near = abs(last_low - support) / support < 0.002
-    bullish = last_close > last_open
-    strength = (last_close - last_low) / last_low
+    if price < support:
+        return "breakdown", support
 
-    if near and bullish and strength > 0.01:
-        status = "strong"
-    elif near:
-        status = "weak"
-    else:
-        status = "none"
+    if distance < 0.5:
+        return "near_support", support
 
-    return {
-        "status": status,
-        "support": support
-    }
+    if distance < 2:
+        return "bounce", support
+
+    return "far", support
 
 
 
@@ -109,6 +99,9 @@ def get_support_status(symbol: str) -> str:
     if near_support:
         return "weak"
     return "none"
+
+
+
 
 
 def compute_structure(df):

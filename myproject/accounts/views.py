@@ -1,12 +1,18 @@
 # Django
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
+import traceback
+
+from rest_framework.authentication import SessionAuthentication
+
+from .models import HistoryItem
 
 # DRF
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status as drf_status
+
 
 # JWT
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -23,7 +29,119 @@ from .services.signals import (
 )
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework import status
 
+from .models import HistoryItem
+from .serializers import HistoryItemSerializer
+
+
+def history_page(request):
+    return render(request, 'accounts/history.html')
+
+
+
+from .utils import add_history_item
+
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import PriceHistory
+from .serializers import PriceHistorySerializer
+
+
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.response import Response
+
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def save_price_history(request):
+    symbol = request.GET.get('symbol', 'BTCUSDT').upper()
+
+    df = fetch_klines_df(symbol, interval='1M', limit=12)
+
+    saved_items = []
+
+    for _, row in df.iterrows():
+        month = row["open_time"].date().replace(day=1)
+
+        item, created = PriceHistory.objects.update_or_create(
+            symbol=symbol,
+            month=month,
+            defaults={
+                "open_price": float(row["open"]),
+                "high_price": float(row["high"]),
+                "low_price": float(row["low"]),
+                "close_price": float(row["close"]),
+            }
+        )
+
+        saved_items.append(item)
+
+    serializer = PriceHistorySerializer(saved_items, many=True)
+
+    return Response({
+        "message": f"Price history saved for {symbol}",
+        "symbol": symbol,
+        "count": len(saved_items),
+        "data": serializer.data
+    })
+
+
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def price_history_list(request):
+    symbol = request.GET.get('symbol', 'BTCUSDT').upper()
+
+    items = PriceHistory.objects.filter(symbol=symbol).order_by('-month')
+    serializer = PriceHistorySerializer(items, many=True)
+
+    return Response(serializer.data)
+
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def some_action(request):
+    # Your logic here
+
+    add_history_item(
+        user=request.user,
+        action='Checked trend',
+        details='User checked market trend.'
+    )
+
+    return Response({'message': 'Action completed.'})
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def history_list(request):
+    history_items = HistoryItem.objects.filter(user=request.user).order_by('-created_at')
+    serializer = HistoryItemSerializer(history_items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def history_clear(request):
+    HistoryItem.objects.filter(user=request.user).delete()
+    return Response(
+        {'message': 'History cleared successfully.'},
+        status=status.HTTP_200_OK
+    )
 
 
 @api_view(['GET'])
@@ -41,51 +159,81 @@ def live_price(request):
 
 @api_view(['GET'])
 def resistance_distance(request):
-    symbol = request.GET.get('symbol', 'BTCUSDT')
+    symbol = request.GET.get('symbol', 'BTCUSDT').upper()
 
     df = fetch_klines_df(symbol)
 
     status, distance = compute_distance(df)
 
+    if status == "too_close":
+        logic = "Price is too close to resistance"
+    elif status == "far":
+        logic = "Price has enough space to resistance"
+    elif status == "medium":
+        logic = "Price is at a moderate distance from resistance"
+    else:
+        logic = "Distance status is unclear"
+
     return Response({
         "symbol": symbol,
-        "distance": distance,
-        "status": status
+        "distance": float(distance),
+        "status": status,
+        "logic": logic
     })
-
-
 
 
 
 @api_view(['GET'])
 def breakout_signal(request):
-    symbol = request.GET.get('symbol', 'BTCUSDT')
+    symbol = request.GET.get('symbol', 'BTCUSDT').upper()
 
     df = fetch_klines_df(symbol)
 
     status, resistance = compute_breakout(df)
 
+    if status == "confirmed":
+        logic = "Price broke above resistance"
+    elif status == "not_confirmed":
+        logic = "Price has not confirmed breakout"
+    else:
+        logic = "Breakout status is unclear"
+
     return Response({
         "symbol": symbol,
         "status": status,
-        "resistance": resistance
+        "resistance": float(resistance),
+        "logic": logic
     })
 
 
 
 
 @api_view(['GET'])
-def support_reaction(request):
-    symbol = request.GET.get('symbol', 'BTCUSDT')
+def support_signal(request):
+    symbol = request.GET.get('symbol', 'BTCUSDT').upper()
 
     df = fetch_klines_df(symbol)
 
     status, support = compute_support(df)
 
+    status = str(status).lower().replace(" ", "_")
+
+    if status == "bounce":
+        logic = "Price is reacting positively from support"
+    elif status == "breakdown":
+        logic = "Price broke below support"
+    elif status == "near_support":
+        logic = "Price is close to support"
+    elif status == "far":
+        logic = "Price is far from support"
+    else:
+        logic = "Support reaction is unclear"
+
     return Response({
         "symbol": symbol,
-        "support": support,
-        "status": status
+        "status": status,
+        "support": float(support),
+        "logic": logic
     })
 
 
@@ -208,7 +356,7 @@ def register_api(request):
 @api_view(['GET'])
 def protected_api(request):
     return Response({
-        'message': 'JWT działa ✅'
+        'message': 'JWT działa'
     })
 
 # LOGIN (JWT)
@@ -250,6 +398,20 @@ def logout_api(request):
 
 
 
+def extract_value(data, key=None, default="UNKNOWN"):
+    # Extract value safely from dict, tuple, list or raw value
+    if isinstance(data, dict):
+        if key:
+            return data.get(key, default)
+        return default
+
+    if isinstance(data, (tuple, list)):
+        return data[0] if len(data) > 0 else default
+
+    if data is None:
+        return default
+
+    return data
 
 
 @api_view(["GET"])
@@ -259,17 +421,28 @@ def long_score(request):
     try:
         df = fetch_klines_df(symbol, limit=200)
 
+        trend_data = compute_trend(df)
+        rsi_data = compute_rsi(df)
+        volume_data = compute_volume(df)
+        structure_data = compute_structure(df)
+        breakout_data = compute_breakout(df)
+        distance_data = compute_distance(df)
+        support_data = compute_support(df)
+
         signals = {
-            "trend": compute_trend(df)["trend"],
-            "rsi": compute_rsi(df)["status"],
-            "volume": compute_volume(df)["status"],
-            "structure": compute_structure(df)["structure"],
-            "breakout": compute_breakout(df)["status"],
-            "distance": compute_distance(df)["status"],
-            "support": compute_support(df)["status"],
+            "trend": str(extract_value(trend_data, "trend")),
+            "rsi": str(extract_value(rsi_data, "status")),
+            "volume": str(extract_value(volume_data, "status")),
+            "structure": str(extract_value(structure_data, "structure")),
+            "breakout": str(extract_value(breakout_data, "status")),
+            "distance": str(extract_value(distance_data, "status")),
+            "support": str(extract_value(support_data, "status")),
         }
 
         score, reasons = calculate_score(signals)
+
+        score = int(score)
+        reasons = [str(reason) for reason in reasons]
 
         probability = (
             "HIGH" if score >= 7 else
@@ -286,7 +459,21 @@ def long_score(request):
         })
 
     except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        print("ERROR IN /api/score/:", e)
+
+        if request.user.is_authenticated:
+            add_history_item(
+                user=request.user,
+                action="Checked score",
+                details=f"{symbol}: score={score}, probability={probability}"
+            )
+
+        return Response(
+            {"error": str(e)},
+            status=500
+        )
+
+
 
 
 # FRONTEND PAGES
@@ -304,4 +491,11 @@ def frontend_register(request):
 
 
 def profile_page(request):
-    return render(request, 'accounts/profile.html')
+    if request.user.is_authenticated:
+        HistoryItem.objects.create(
+            user=request.user,
+            action="Viewed market signals",
+            details="User opened market signals page"
+        )
+
+    return render(request, "accounts/profile.html")

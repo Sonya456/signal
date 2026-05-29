@@ -27,7 +27,7 @@ urlpatterns = [
     path('api/rsi/', views.rsi_signal),
     path('api/breakout/', views.breakout_signal),
     path('api/structure/', views.market_structure),
-    path('api/support/', views.support_reaction),
+    path('api/support/', views.support_signal),
     path('api/score/', views.long_score),
     path('api/price/', views.live_price),
 
@@ -37,4 +37,13 @@ urlpatterns = [
     path('api/login/', views.login_api, name='api_login'),
     path('api/logout/', views.logout_api, name='api_logout'),
     path('api/protected/', views.protected_api, name='api_protected'),
+
+    path('history/', views.history_page, name='history_page'),
+    path('api/history/', views.history_list, name='history_list'),
+    path('api/history/clear/', views.history_clear, name='history_clear'),
+
+    path('api/price-history/save/', views.save_price_history, name='save_price_history'),
+    path('api/price-history/', views.price_history_list, name='price')
+
+
 ]

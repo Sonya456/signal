@@ -97,7 +97,7 @@ async function getDistance(symbol, elementId) {
     try {
         const res = await fetch(`/api/distance/?symbol=${symbol}`);
         const data = await res.json();
-
+        console.log("DISTANCE RESPONSE:", data);
         const el = document.getElementById(elementId);
 
         let icon = "⏳";
@@ -180,35 +180,57 @@ async function getSupport(symbol, elementId) {
 }
 
 async function getStructure(symbol, elementId) {
-
     try {
-        const res = await fetch(`/api/structure/?symbol=${symbol}`);
+        const res = await fetch(`/api/structure/?symbol=${encodeURIComponent(symbol)}`);
+
+        if (!res.ok) {
+            throw new Error(`Structure HTTP error: ${res.status}`);
+        }
+
         const data = await res.json();
+
+        console.log("STRUCTURE RESPONSE:", data);
 
         const el = document.getElementById(elementId);
 
-        let icon = "⏳";
+        if (!el) {
+            console.error("Structure element not found:", elementId);
+            return;
+        }
 
-        if (data.structure === "strong_bull") {
+        const structure = data.structure ?? data.status ?? "unknown";
+        const logic = data.logic ?? "Structure logic unavailable";
+
+        let icon = "⏳";
+        el.className = "trend-neutral";
+
+        if (structure === "strong_bull") {
             el.className = "trend-bull";
             icon = "🚀";
-        }
-        else if (data.structure === "weak") {
+        } else if (structure === "weak") {
             el.className = "trend-bear";
             icon = "🔻";
         }
 
         el.innerHTML = `
-            Market Structure: ${data.structure.replace("_", " ").toUpperCase()}<br>
-            ${icon} ${data.logic}
+            Market Structure: ${String(structure).replaceAll("_", " ").toUpperCase()}<br>
+            ${icon} ${logic}
         `;
 
     } catch (err) {
         console.error("Structure error:", err);
+
+        const el = document.getElementById(elementId);
+
+        if (el) {
+            el.className = "trend-bear";
+            el.innerHTML = `
+                Market Structure: ERROR<br>
+                ❌ Structure data unavailable
+            `;
+        }
     }
 }
-
-
 async function getRSI(symbol, elementId) {
 
     try {

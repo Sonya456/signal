@@ -1,0 +1,212 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}History{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>User History</h2>
+
+    <button type="button" onclick="clearHistory()">Clear history</button>
+
+    <div id="history-list">
+        Loading user history...
+    </div>
+
+    <div id="error" class="error"></div>
+</div>
+
+<div class="card">
+    <h2>Price History</h2>
+
+    <label for="price-symbol">Symbol:</label>
+    <select id="price-symbol">
+        <option value="BTCUSDT">BTCUSDT</option>
+        <option value="ETHUSDT">ETHUSDT</option>
+    </select>
+
+    <button type="button" onclick="savePriceHistory()">Save monthly price history</button>
+    <button type="button" onclick="loadPriceHistory()">Load price history</button>
+
+    <div id="price-history-list">
+        Loading price history...
+    </div>
+
+    <div id="price-error" class="error"></div>
+</div>
+
+<script>
+console.log("History page script loaded");
+
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+async function loadHistory() {
+    console.log("loadHistory started");
+
+    const historyList = document.getElementById("history-list");
+    const errorBox = document.getElementById("error");
+
+    try {
+        const response = await fetch("/api/history/", {
+            method: "GET",
+            credentials: "same-origin"
+        });
+
+        console.log("History API status:", response.status);
+
+        if (!response.ok) {
+            throw new Error(`History HTTP error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log("HISTORY RESPONSE:", data);
+
+        if (!Array.isArray(data) || data.length === 0) {
+            historyList.innerHTML = "<p>No user history yet.</p>";
+            return;
+        }
+
+        historyList.innerHTML = data.map(item => `
+            <div class="history-item">
+                <strong>${item.action || "No action"}</strong><br>
+                <span>${item.details || ""}</span><br>
+                <small>${item.created_at || ""}</small>
+            </div>
+            <hr>
+        `).join("");
+
+    } catch (error) {
+        console.error("History error:", error);
+        errorBox.textContent = error.message;
+        historyList.innerHTML = "<p>Could not load user history.</p>";
+    }
+}
+
+async function clearHistory() {
+    console.log("clearHistory clicked");
+
+    const errorBox = document.getElementById("error");
+
+    try {
+        const response = await fetch("/api/history/clear/", {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken")
+            }
+        });
+
+        console.log("Clear history status:", response.status);
+
+        if (!response.ok) {
+            throw new Error(`Could not clear history. HTTP ${response.status}`);
+        }
+
+        await loadHistory();
+
+    } catch (error) {
+        console.error("Clear history error:", error);
+        errorBox.textContent = error.message;
+    }
+}
+
+async function savePriceHistory() {
+    console.log("savePriceHistory clicked");
+
+    const symbol = document.getElementById("price-symbol").value;
+    const priceError = document.getElementById("price-error");
+
+    try {
+        const response = await fetch(`/api/price-history/save/?symbol=${encodeURIComponent(symbol)}`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken")
+            }
+        });
+
+        console.log("Save price history status:", response.status);
+
+        if (!response.ok) {
+            throw new Error(`Could not save price history. HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log("SAVE PRICE HISTORY RESPONSE:", data);
+
+        await loadPriceHistory();
+
+    } catch (error) {
+        console.error("Save price history error:", error);
+        priceError.textContent = error.message;
+    }
+}
+
+async function loadPriceHistory() {
+    console.log("loadPriceHistory started");
+
+    const symbol = document.getElementById("price-symbol").value;
+    const priceHistoryList = document.getElementById("price-history-list");
+    const priceError = document.getElementById("price-error");
+
+    try {
+        const response = await fetch(`/api/price-history/?symbol=${encodeURIComponent(symbol)}`, {
+            method: "GET",
+            credentials: "same-origin"
+        });
+
+        console.log("Price history API status:", response.status);
+
+        if (!response.ok) {
+            throw new Error(`Price history HTTP error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log("PRICE HISTORY RESPONSE:", data);
+
+        if (!Array.isArray(data) || data.length === 0) {
+            priceHistoryList.innerHTML = "<p>No price history yet. Click Save monthly price history.</p>";
+            return;
+        }
+
+        priceHistoryList.innerHTML = data.map(item => `
+            <div class="history-item">
+                <strong>${item.symbol} - ${item.month}</strong><br>
+                Open: ${Number(item.open_price).toFixed(2)}<br>
+                High: ${Number(item.high_price).toFixed(2)}<br>
+                Low: ${Number(item.low_price).toFixed(2)}<br>
+                Close: ${Number(item.close_price).toFixed(2)}<br>
+            </div>
+            <hr>
+        `).join("");
+
+    } catch (error) {
+        console.error("Price history error:", error);
+        priceError.textContent = error.message;
+        priceHistoryList.innerHTML = "<p>Could not load price history.</p>";
+    }
+}
+
+loadHistory();
+loadPriceHistory();
+</script>
+{% endblock %}
